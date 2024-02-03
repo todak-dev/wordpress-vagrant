@@ -1,0 +1,116 @@
+---
+
+- name: 1. Aktualizace cache baliku
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    force: true
+  
+- name: 2. Instalace PHP
+  become: true
+  ansible.builtin.package:
+    name: 
+      - php7.4
+      - php7.4-cli
+      - php7.4-fpm
+      - php7.4-mysql
+      - php7.4-json
+      - php7.4-opcache
+      - php7.4-mbstring
+      - php7.4-xml
+      - php7.4-gd
+      - php7.4-curl
+    state: present
+    force: true
+
+- name: 3. Tvorba adresarove struktury pro WP
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: 0755
+  loop:
+    - /var/www/html/wordpress
+    - /var/www/html/wordpress/public_html
+  become: true
+
+- name: 4. Stazeni WP z oficialniho webu
+  become: true
+  ansible.builtin.shell: wget -O /tmp/latest.tar.gz https://cs.wordpress.org/latest-cs_CZ.tar.gz
+  args:
+    executable: /bin/bash
+
+- name: 5. Rozbaleni WP
+  become: true
+  ansible.builtin.shell: tar -xzf /tmp/latest.tar.gz -C /tmp 
+  args:
+    executable: /bin/bash
+
+- name: 6. Presun WP
+  become: true
+  ansible.builtin.shell: mv /tmp/wordpress/* /var/www/html/wordpress/public_html/
+  args:
+    executable: /bin/bash
+
+- name: 7. Nastaveni vlasstnika
+  ansible.builtin.file:
+    path: /var/www/html/wordpress/public_html/
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+    mode: 0755
+  become: true
+
+- name: 8. Kopirovani konfiguracniho souboru
+  ansible.builtin.copy:
+    src: wp-config.php
+    dest: /var/www/html/wordpress/public_html/wp-config.php
+    owner: www-data
+    group: www-data
+    mode: '0755'
+  become: true
+
+- name: 9. Tvorba adresare pro zalohovani
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - /export
+    - /export/scripts
+  become: true
+
+- name: 10. Kopirovani zalohovacich skriptu
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /export/scripts
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - db-backup.sh
+    - wp-backup.sh
+  become: true
+
+- name: 11. cronjob pro zalohovani DB
+  ansible.builtin.cron:
+    cron_file: "db-backup"
+    name: "db-backup"
+    user: root
+    minute: "*/5"
+    job: "/export/scripts/db-backup.sh"
+  become: true
+
+- name: 12. cronjob pro zalohovani Wordpress
+  ansible.builtin.cron:
+    cron_file: "wp-backup"
+    name: "wp-backup"
+    user: root
+    minute: "*/5"
+    job: "/export/scripts/wp-backup.sh"
+  become: true
+

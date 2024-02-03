@@ -1,0 +1,7 @@
+- name: Instalace CMS Wordpress
+  hosts: all
+  roles: 
+    - nginx
+    - mariadb
+    - wordpress
+    - ufw

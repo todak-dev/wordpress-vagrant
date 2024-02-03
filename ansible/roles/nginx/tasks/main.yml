@@ -1,0 +1,65 @@
+---
+
+- name: 1. Aktualizace cache baliku
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+  
+- name: 2. Instalace nginx
+  become: true
+  ansible.builtin.package:
+    name: 
+      - nginx
+    state: present
+
+- name: 3. Kopirovani souboru
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/nginx/sites-available/
+    mode: "0644"
+    owner: root
+    group: root
+  with_items:
+    - wordpress.conf
+
+- name: 4. Mazani nepotrebnych konfiguracnich souboru
+  ansible.builtin.file:
+    path: /etc/nginx/sites-available/default
+    state: absent
+  become: true
+
+- name: 5. Mazani nepotrebnych symlinku
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: true
+
+- name: 6. Tvorba symlinku
+  become: true
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/wordpress.conf
+    dest: /etc/nginx/sites-enabled/wordpress.conf
+    owner: root
+    group: root
+    state: link
+    force: true
+
+- name: 7. Povoleni fw
+  become: true
+  ansible.builtin.shell: ufw allow 'Nginx HTTP'
+  args:
+    executable: /bin/bash
+
+- name: 8.Restart sluzby nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
+  become: true
+
+- name: 9. Povoleni sluzby nginx
+  ansible.builtin.service:
+    name: nginx
+    enabled: yes
+  become: true
+

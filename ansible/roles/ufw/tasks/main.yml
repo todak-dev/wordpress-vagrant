@@ -1,0 +1,29 @@
+---
+
+- name: 1. Instalace pravidel pro UFW
+  ansible.builtin.file:
+    path: /opt/ufw
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  become: true
+
+- name: 2. Kopirovani  skriptu
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /opt/ufw
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - ufw_up
+    - ufw_down
+  become: true
+
+- name: 3. Spusteni pravidel UFW
+  ansible.builtin.shell: /opt/ufw/ufw_up
+  args:
+    executable: /bin/bash
+  become: true
+
